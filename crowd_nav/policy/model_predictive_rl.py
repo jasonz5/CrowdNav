@@ -344,6 +344,7 @@ class ModelPredictiveRL(Policy):
         end_position = np.array((px, py))
         reaching_goal = norm(end_position - np.array([robot_state.gx, robot_state.gy])) < robot_state.radius
 
+        #TODO：change model-based RL to model-free RL
         if collision:
             reward = -0.25
         elif reaching_goal:

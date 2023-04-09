@@ -115,7 +115,7 @@ def main(args):
 
     # configure trainer and explorer
     memory = ReplayMemory(capacity)
-    model = policy.get_model()
+    model = policy.get_model()   # model is value_estimator for ModelPredictiveRL
     batch_size = train_config.trainer.batch_size
     optimizer = train_config.trainer.optimizer
     if policy_config.name == 'model_predictive_rl':

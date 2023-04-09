@@ -50,12 +50,12 @@ class StatePredictor(nn.Module):
             next_state[1] = next_state[1] + action.vy * self.time_step
             next_state[2] = action.vx
             next_state[3] = action.vy
-        else:
-            next_state[7] = next_state[7] + action.r
-            next_state[0] = next_state[0] + np.cos(next_state[7]) * action.v * self.time_step
-            next_state[1] = next_state[1] + np.sin(next_state[7]) * action.v * self.time_step
-            next_state[2] = np.cos(next_state[7]) * action.v
-            next_state[3] = np.sin(next_state[7]) * action.v
+        else:  #[x]: theta is state[8], not state[7]
+            next_state[8] = next_state[8] + action.r
+            next_state[0] = next_state[0] + np.cos(next_state[8]) * action.v * self.time_step
+            next_state[1] = next_state[1] + np.sin(next_state[8]) * action.v * self.time_step
+            next_state[2] = np.cos(next_state[8]) * action.v
+            next_state[3] = np.sin(next_state[8]) * action.v
 
         return next_state.unsqueeze(0).unsqueeze(0)
 
@@ -97,12 +97,12 @@ class LinearStatePredictor(object):
             next_state[1] = next_state[1] + action.vy * self.time_step
             next_state[2] = action.vx
             next_state[3] = action.vy
-        else:
-            next_state[7] = next_state[7] + action.r
-            next_state[0] = next_state[0] + np.cos(next_state[7]) * action.v * self.time_step
-            next_state[1] = next_state[1] + np.sin(next_state[7]) * action.v * self.time_step
-            next_state[2] = np.cos(next_state[7]) * action.v
-            next_state[3] = np.sin(next_state[7]) * action.v
+        else:   #[x]: theta is state[8], not state[7]
+            next_state[8] = next_state[8] + action.r   
+            next_state[0] = next_state[0] + np.cos(next_state[8]) * action.v * self.time_step
+            next_state[1] = next_state[1] + np.sin(next_state[8]) * action.v * self.time_step
+            next_state[2] = np.cos(next_state[8]) * action.v
+            next_state[3] = np.sin(next_state[8]) * action.v
 
         return next_state.unsqueeze(0).unsqueeze(0)
 
@@ -112,8 +112,8 @@ class LinearStatePredictor(object):
         """
         # px, py, vx, vy, radius
         next_state = human_states.clone().squeeze()
-        next_state[:, 0] = next_state[:, 0] + next_state[:, 2]
-        next_state[:, 1] = next_state[:, 1] + next_state[:, 3]
+        next_state[:, 0] = next_state[:, 0] + next_state[:, 2] * 0.25 #HACK: 0.25 is self.time_step, change it later
+        next_state[:, 1] = next_state[:, 1] + next_state[:, 3] * 0.25
 
         return next_state.unsqueeze(0)
 
