@@ -15,7 +15,7 @@ from crowd_nav.utils.trainer import VNRLTrainer, MPRLTrainer
 from crowd_nav.utils.memory import ReplayMemory
 from crowd_nav.utils.explorer import Explorer
 from crowd_nav.policy.policy_factory import policy_factory
-
+# torch.autograd.set_detect_anomaly(True)
 
 def set_random_seeds(seed):
     """
@@ -233,12 +233,14 @@ def main(args):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser('Parse configuration file')
     parser.add_argument('--policy', type=str, default='model_predictive_rl')
-    parser.add_argument('--config', type=str, default='configs/icra_benchmark/mp_separate.py')
-    parser.add_argument('--output_dir', type=str, default='data/output')
+    parser.add_argument('--config', type=str, default='configs/icra_benchmark/mp_separate_dp.py')
+    parser.add_argument('--output_dir', type=str, default='data/output_mp_separate_dp')
     parser.add_argument('--overwrite', default=False, action='store_true')
     parser.add_argument('--weights', type=str)
     parser.add_argument('--resume', default=False, action='store_true')
-    parser.add_argument('--gpu', default=False, action='store_true')
+    # parser.add_argument('--gpu', default=False)
+    # parser.add_argument('--debug', default=False)
+    parser.add_argument('--gpu', default=True, action='store_true')
     parser.add_argument('--debug', default=False, action='store_true')
     parser.add_argument('--test_after_every_eval', default=False, action='store_true')
     parser.add_argument('--randomseed', type=int, default=17)

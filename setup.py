@@ -16,12 +16,12 @@ setup(
     ],
     install_requires=[
         'gitpython',
-        'gym==0.13.0',
+        'gym',
         'matplotlib',
         'numpy',
         'scipy',
-        'torch==1.4.0',
-        'torchvision==0.5.0',
+        'torch',
+        'torchvision',
         'seaborn',
         'tqdm',
         'tensorboardX'
