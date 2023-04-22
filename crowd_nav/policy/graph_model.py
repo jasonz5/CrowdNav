@@ -59,6 +59,7 @@ class RGL(nn.Module):
 
         # for visualization
         self.A = None
+        # self.Normalized_A = None
 
     def compute_similarity_matrix(self, X):
         if self.similarity_function == 'embedded_gaussian':
@@ -113,6 +114,7 @@ class RGL(nn.Module):
         # compute matrix A
         if not self.layerwise_graph:
             normalized_A = self.compute_similarity_matrix(X)
+            # self.Normalized_A = normalized_A
             self.A = normalized_A[0, :, :].data.cpu().numpy()
 
         next_H = H = X
@@ -129,6 +131,9 @@ class RGL(nn.Module):
             H = next_H
 
         return next_H
+    
+    # def get_A(self):
+    #     return self.A
 
 
 # class RGL(nn.Module):

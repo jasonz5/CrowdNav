@@ -7,15 +7,15 @@ from crowd_sim.envs.policy.policy import Policy
 from crowd_sim.envs.utils.action import ActionRot, ActionXY
 from crowd_sim.envs.utils.state import tensor_to_joint_state
 from crowd_sim.envs.utils.utils import point_to_segment_dist
-from crowd_nav.policy.state_predictor_ori import StatePredictor, LinearStatePredictor
+from crowd_nav.policy.state_predictor import StatePredictor, LinearStatePredictor
 from crowd_nav.policy.graph_model import RGL
-from crowd_nav.policy.value_estimator import ValueEstimator
+from crowd_nav.policy.value_estimator_attn import ValueEstimatorAttn
 
 
-class ModelPredictiveRL(Policy):
+class GCNsAttnRL(Policy):
     def __init__(self):
         super().__init__()
-        self.name = 'ModelPredictiveRL'
+        self.name = 'GCNsAttnRL'
         self.trainable = True
         self.multiagent_training = True
         self.kinematics = None
@@ -47,31 +47,31 @@ class ModelPredictiveRL(Policy):
 
     def configure(self, config):
         self.set_common_parameters(config)
-        self.planning_depth = config.model_predictive_rl.planning_depth
-        self.do_action_clip = config.model_predictive_rl.do_action_clip
-        if hasattr(config.model_predictive_rl, 'sparse_search'):
-            self.sparse_search = config.model_predictive_rl.sparse_search
-        self.planning_width = config.model_predictive_rl.planning_width
-        self.share_graph_model = config.model_predictive_rl.share_graph_model
-        self.linear_state_predictor = config.model_predictive_rl.linear_state_predictor
+        self.planning_depth = config.gcn_attn_rl.planning_depth
+        self.do_action_clip = config.gcn_attn_rl.do_action_clip
+        if hasattr(config.gcn_attn_rl, 'sparse_search'):
+            self.sparse_search = config.gcn_attn_rl.sparse_search
+        self.planning_width = config.gcn_attn_rl.planning_width
+        self.share_graph_model = config.gcn_attn_rl.share_graph_model
+        self.linear_state_predictor = config.gcn_attn_rl.linear_state_predictor
 
         if self.linear_state_predictor:
             self.state_predictor = LinearStatePredictor(config, self.time_step)
             graph_model = RGL(config, self.robot_state_dim, self.human_state_dim)
-            self.value_estimator = ValueEstimator(config, graph_model)
-            self.model = [graph_model, self.value_estimator.value_network]
+            self.value_estimator = ValueEstimatorAttn(config, graph_model)
+            self.model = [graph_model, self.value_estimator.pooling_network, self.value_estimator.value_network]
         else:
             if self.share_graph_model:
                 graph_model = RGL(config, self.robot_state_dim, self.human_state_dim)
-                self.value_estimator = ValueEstimator(config, graph_model)
+                self.value_estimator = ValueEstimatorAttn(config, graph_model)
                 self.state_predictor = StatePredictor(config, graph_model, self.time_step)
-                self.model = [graph_model, self.value_estimator.value_network, self.state_predictor.human_motion_predictor]
+                self.model = [graph_model, self.value_estimator.pooling_network, self.value_estimator.value_network, self.state_predictor.human_motion_predictor]
             else:
                 graph_model1 = RGL(config, self.robot_state_dim, self.human_state_dim)
-                self.value_estimator = ValueEstimator(config, graph_model1)
+                self.value_estimator = ValueEstimatorAttn(config, graph_model1)
                 graph_model2 = RGL(config, self.robot_state_dim, self.human_state_dim)
                 self.state_predictor = StatePredictor(config, graph_model2, self.time_step)
-                self.model = [graph_model1, graph_model2, self.value_estimator.value_network,
+                self.model = [graph_model1, graph_model2, self.value_estimator.pooling_network, self.value_estimator.value_network,
                               self.state_predictor.human_motion_predictor]
 
         logging.info('Planning depth: {}'.format(self.planning_depth))
@@ -112,6 +112,7 @@ class ModelPredictiveRL(Policy):
             if self.share_graph_model:
                 return {
                     'graph_model': self.value_estimator.graph_model.state_dict(),
+                    'pooling_network': self.value_estimator.pooling_network.state_dict(),
                     'value_network': self.value_estimator.value_network.state_dict(),
                     'motion_predictor': self.state_predictor.human_motion_predictor.state_dict()
                 }
@@ -119,12 +120,14 @@ class ModelPredictiveRL(Policy):
                 return {
                     'graph_model1': self.value_estimator.graph_model.state_dict(),
                     'graph_model2': self.state_predictor.graph_model.state_dict(),
+                    'pooling_network': self.value_estimator.pooling_network.state_dict(),
                     'value_network': self.value_estimator.value_network.state_dict(),
                     'motion_predictor': self.state_predictor.human_motion_predictor.state_dict()
                 }
         else:
             return {
                     'graph_model': self.value_estimator.graph_model.state_dict(),
+                    'pooling_network': self.value_estimator.pooling_network.state_dict(),
                     'value_network': self.value_estimator.value_network.state_dict()
                 }
 
@@ -139,10 +142,12 @@ class ModelPredictiveRL(Policy):
                 self.value_estimator.graph_model.load_state_dict(state_dict['graph_model1'])
                 self.state_predictor.graph_model.load_state_dict(state_dict['graph_model2'])
 
+            self.value_estimator.pooling_network.load_state_dict(state_dict['pooling_network'])
             self.value_estimator.value_network.load_state_dict(state_dict['value_network'])
             self.state_predictor.human_motion_predictor.load_state_dict(state_dict['motion_predictor'])
         else:
             self.value_estimator.graph_model.load_state_dict(state_dict['graph_model'])
+            self.value_estimator.pooling_network.load_state_dict(state_dict['pooling_network'])
             self.value_estimator.value_network.load_state_dict(state_dict['value_network'])
 
     def save_model(self, file):
@@ -204,6 +209,12 @@ class ModelPredictiveRL(Policy):
             return ActionXY(0, 0) if self.kinematics == 'holonomic' else ActionRot(0, 0)
         if self.action_space is None:
             self.build_action_space(state.robot_state.v_pref)
+        #TODO: if no humans, choose greedy action
+        if not state.human_states:
+            assert self.phase != 'train'
+            # if hasattr(self, 'attention_weights'):
+            #     self.attention_weights = list()
+            return self.select_greedy_action(state.robot_state)
 
         probability = np.random.random()
         if self.phase == 'train' and probability < self.epsilon:
@@ -344,7 +355,7 @@ class ModelPredictiveRL(Policy):
         end_position = np.array((px, py))
         reaching_goal = norm(end_position - np.array([robot_state.gx, robot_state.gy])) < robot_state.radius
 
-        #TODO：change model-based RL to model-free RL
+        #no need：change model-based RL to model-free RL
         if collision:
             reward = -0.25
         elif reaching_goal:
@@ -356,6 +367,45 @@ class ModelPredictiveRL(Policy):
             reward = 0
 
         return reward
+
+
+    def select_greedy_action(self, self_state):
+        # find the greedy action given kinematic constraints and return the closest action in the action space
+        direction = np.arctan2(self_state.gy - self_state.py, self_state.gx - self_state.px)
+        distance = np.linalg.norm((self_state.gy - self_state.py, self_state.gx - self_state.px))
+        if self.kinematics == 'holonomic':
+            speed = min(distance / self.time_step, self_state.v_pref)
+            vx = np.cos(direction) * speed
+            vy = np.sin(direction) * speed
+
+            min_diff = float('inf')
+            closest_action = None
+            for action in self.action_space:
+                diff = np.linalg.norm(np.array(action) - np.array((vx, vy)))
+                if diff < min_diff:
+                    min_diff = diff
+                    closest_action = action
+        else:
+            rotation = direction - self_state.theta
+            # if goal is not in the field of view, always rotate first
+            if rotation < self.rotations[0]:
+                closest_action = ActionRot(self.speeds[0], self.rotations[0])
+            elif rotation > self.rotations[-1]:
+                closest_action = ActionRot(self.speeds[0], self.rotations[-1])
+            else:
+                speed = min(distance / self.time_step, self_state.v_pref)
+
+                min_diff = float('inf')
+                closest_action = None
+                for action in self.action_space:
+                    diff = np.linalg.norm(np.array((np.cos(action.r) * action.v, np.sin(action.r) * action.v)) -
+                                          np.array((np.cos(rotation) * speed), np.sin(rotation) * speed))
+                    if diff < min_diff:
+                        min_diff = diff
+                        closest_action = action
+
+        return closest_action
+    
 
     def transform(self, state):
         """

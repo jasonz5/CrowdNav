@@ -14,7 +14,7 @@ class StatePredictor(nn.Module):
         self.trainable = True
         self.kinematics = config.action_space.kinematics
         self.graph_model = graph_model
-        self.human_motion_predictor = mlp(config.gcn.X_dim, config.gcn_attn_rl.motion_predictor_dims)
+        self.human_motion_predictor = mlp(config.gcn.X_dim, config.model_predictive_rl.motion_predictor_dims)
         self.time_step = time_step
 
     def forward(self, state, action, detach=False):

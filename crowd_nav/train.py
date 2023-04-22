@@ -124,6 +124,12 @@ def main(args):
                               freeze_state_predictor=train_config.train.freeze_state_predictor,
                               detach_state_predictor=train_config.train.detach_state_predictor,
                               share_graph_model=policy_config.model_predictive_rl.share_graph_model)
+    elif policy_config.name == 'gcn_attn_rl':
+        trainer = MPRLTrainer(model, policy.state_predictor, memory, device, policy, writer, batch_size, optimizer, env.human_num,
+                              reduce_sp_update_frequency=train_config.train.reduce_sp_update_frequency,
+                              freeze_state_predictor=train_config.train.freeze_state_predictor,
+                              detach_state_predictor=train_config.train.detach_state_predictor,
+                              share_graph_model=policy_config.gcn_attn_rl.share_graph_model)
     else:
         trainer = VNRLTrainer(model, memory, device, policy, batch_size, optimizer, writer)
     explorer = Explorer(env, robot, device, writer, memory, policy.gamma, target_policy=policy)
@@ -232,16 +238,19 @@ def main(args):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser('Parse configuration file')
-    parser.add_argument('--policy', type=str, default='model_predictive_rl')
-    parser.add_argument('--config', type=str, default='configs/icra_benchmark/mp_separate_dp.py')
-    parser.add_argument('--output_dir', type=str, default='data/output_mp_separate_dp')
+    parser.add_argument('--policy', type=str, default='gcn_attn_rl')
+    parser.add_argument('--config', type=str, default='configs/icra_benchmark/gcn_attn_rl.py')
+    # parser.add_argument('--policy', type=str, default='model_predictive_rl')
+    # parser.add_argument('--config', type=str, default='configs/icra_benchmark/mp_separate.py')
+
+    parser.add_argument('--output_dir', type=str, default='data/output_gcn_attn_rl')
     parser.add_argument('--overwrite', default=False, action='store_true')
     parser.add_argument('--weights', type=str)
     parser.add_argument('--resume', default=False, action='store_true')
     # parser.add_argument('--gpu', default=False)
     # parser.add_argument('--debug', default=False)
-    parser.add_argument('--gpu', default=True, action='store_true')
-    parser.add_argument('--debug', default=False, action='store_true')
+    parser.add_argument('--gpu', default=False, action='store_true')
+    parser.add_argument('--debug', default=True, action='store_true')
     parser.add_argument('--test_after_every_eval', default=False, action='store_true')
     parser.add_argument('--randomseed', type=int, default=17)
 

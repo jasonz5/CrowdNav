@@ -10,7 +10,7 @@ class EnvConfig(BaseEnvConfig):
 class PolicyConfig(BasePolicyConfig):
     def __init__(self, debug=False):
         super(PolicyConfig, self).__init__(debug)
-        self.name = 'model_predictive_rl'
+        self.name = 'gcn_attn_rl'
 
         # gcn
         self.gcn.num_layer = 2
@@ -19,14 +19,15 @@ class PolicyConfig(BasePolicyConfig):
         self.gcn.layerwise_graph = False
         self.gcn.skip_connection = True
 
-        self.model_predictive_rl = Config()
-        self.model_predictive_rl.linear_state_predictor = False
-        self.model_predictive_rl.planning_depth = 1
-        self.model_predictive_rl.planning_width = 1
-        self.model_predictive_rl.do_action_clip = False
-        self.model_predictive_rl.motion_predictor_dims = [64, 5]
-        self.model_predictive_rl.value_network_dims = [32, 100, 100, 1]
-        self.model_predictive_rl.share_graph_model = False
+        self.gcn_attn_rl = Config()
+        self.gcn_attn_rl.linear_state_predictor = False
+        self.gcn_attn_rl.planning_depth = 1
+        self.gcn_attn_rl.planning_width = 1
+        self.gcn_attn_rl.do_action_clip = False
+        self.gcn_attn_rl.motion_predictor_dims = [64, 5]
+        self.gcn_attn_rl.pooling_dims = [32, 32]
+        self.gcn_attn_rl.value_network_dims = [32, 64, 64, 1]
+        self.gcn_attn_rl.share_graph_model = False
 
 
 class TrainConfig(BaseTrainConfig):
@@ -36,4 +37,3 @@ class TrainConfig(BaseTrainConfig):
         self.train.freeze_state_predictor = False
         self.train.detach_state_predictor = False
         self.train.reduce_sp_update_frequency = False
-        # self.train.train_episodes = 1000
