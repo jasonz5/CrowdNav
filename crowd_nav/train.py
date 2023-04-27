@@ -250,7 +250,7 @@ if __name__ == '__main__':
     # parser.add_argument('--gpu', default=False)
     # parser.add_argument('--debug', default=False)
     parser.add_argument('--gpu', default=False, action='store_true')
-    parser.add_argument('--debug', default=True, action='store_true')
+    parser.add_argument('--debug', default=False, action='store_true')
     parser.add_argument('--test_after_every_eval', default=False, action='store_true')
     parser.add_argument('--randomseed', type=int, default=17)
 

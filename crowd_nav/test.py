@@ -121,15 +121,25 @@ def main(args):
         cumulative_reward = sum([pow(gamma, t * robot.time_step * robot.v_pref)
              * reward for t, reward in enumerate(rewards)])
 
+        # if args.photo_folder is not None:
+        #     if not os.path.exists(args.photo_folder):
+        #         os.makedirs(args.photo_folder)
+        #     output_file = os.path.join(folder_path, 'model_predictive_rl.png')
+        #     plt.savefig(output_file)
+
         if args.traj:
-            env.render('traj', args.video_file)
+            if args.photo_dir is not None:
+                # args.photo_file = os.path.join(args.photo_dir, policy_config.name)
+                args.photo_file = args.photo_dir + args.phase + '_' + str(args.test_case) + '_'  + args.policy_name + '.png'
+            env.render('traj', args.photo_file)
         else:
             if args.video_dir is not None:
-                if policy_config.name == 'gcn':
-                    args.video_file = os.path.join(args.video_dir, policy_config.name + '_' + policy_config.gcn.similarity_function)
-                else:
-                    args.video_file = os.path.join(args.video_dir, policy_config.name)
-                args.video_file = args.video_file + '_' + args.phase + '_' + str(args.test_case) + '.mp4'
+                # if policy_config.name == 'gcn':
+                #     args.video_file = os.path.join(args.video_dir, policy_config.name + '_' + policy_config.gcn.similarity_function)
+                # else:
+                #     args.video_file = os.path.join(args.video_dir, policy_config.name)
+                # args.video_file = args.video_file + '_' + args.phase + '_' + str(args.test_case) + '.mp4'
+                args.video_file = args.video_dir + args.phase + '_' + str(args.test_case) + '_'  + args.policy_name + '.mp4'
             env.render('video', args.video_file)
         logging.info('It takes %.2f seconds to finish. Final status is %s, cumulative_reward is %f', env.global_time, info, cumulative_reward)
         if robot.visible and info == 'reach goal':
@@ -148,8 +158,11 @@ def main(args):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser('Parse configuration file')
     parser.add_argument('--config', type=str, default=None)
-    parser.add_argument('--policy', type=str, default='model_predictive_rl')
-    parser.add_argument('-m', '--model_dir', type=str, default=None)
+    # parser.add_argument('--config', type=str, default='configs/icra_benchmark/orca.py')
+    parser.add_argument('--policy', type=str, default='gcn_attn_rl') # orca sarl model_predictive_rl gcn_attn_rl
+    parser.add_argument('--policy_name', type=str, default='Gattn') # ORCA SARL RGL_OneStep Gattn Gattn_linear
+    parser.add_argument('-m', '--model_dir', type=str, default='data/Done/output_Gattn') #TODO: default=None 'data/Done/output_SARL'
+
     parser.add_argument('--il', default=False, action='store_true')
     parser.add_argument('--rl', default=False, action='store_true')
     parser.add_argument('--gpu', default=False, action='store_true')
@@ -158,14 +171,16 @@ if __name__ == '__main__':
     parser.add_argument('-c', '--test_case', type=int, default=None)
     parser.add_argument('--square', default=False, action='store_true')
     parser.add_argument('--circle', default=False, action='store_true')
-    parser.add_argument('--video_file', type=str, default=None)
-    parser.add_argument('--video_dir', type=str, default=None)
-    parser.add_argument('--traj', default=False, action='store_true')
+    parser.add_argument('--photo_dir', type=str, default='photo/') #TODO: default=None
+    parser.add_argument('--photo_file', type=str, default=None)
+    parser.add_argument('--video_dir', type=str, default=None) #TODO: default=None  'video/'
+    parser.add_argument('--video_file', type=str, default=None) 
+    parser.add_argument('--traj', default=False, action='store_true') #true for photo, false for video
     parser.add_argument('--debug', default=False, action='store_true')
     parser.add_argument('--human_num', type=int, default=None)
     parser.add_argument('--safety_space', type=float, default=0.2)
     parser.add_argument('--test_scenario', type=str, default=None)
-    parser.add_argument('--plot_test_scenarios_hist', default=True, action='store_true')
+    parser.add_argument('--plot_test_scenarios_hist', default=False, action='store_true') # 绘制seeds情况直方图
     parser.add_argument('-d', '--planning_depth', type=int, default=None)
     parser.add_argument('-w', '--planning_width', type=int, default=None)
     parser.add_argument('--sparse_search', default=False, action='store_true')

@@ -7,6 +7,7 @@ import matplotlib.lines as mlines
 from matplotlib import patches
 import numpy as np
 from numpy.linalg import norm
+import torch
 
 from crowd_sim.envs.policy.policy_factory import policy_factory
 from crowd_sim.envs.utils.state import tensor_to_joint_state, JointState
@@ -444,7 +445,14 @@ class CrowdSim(gym.Env):
                     for human_direction in human_directions:
                         ax.add_artist(human_direction)
             plt.legend([robot], ['Robot'], fontsize=16)
-            plt.show()
+
+
+            if output_file is not None:
+                # save as fig
+                plt.savefig(output_file)
+            else:
+                plt.show()
+
         elif mode == 'video':
             fig, ax = plt.subplots(figsize=(7, 7))
             ax.tick_params(labelsize=12)
@@ -588,7 +596,7 @@ class CrowdSim(gym.Env):
                         for j, circle in enumerate(circles):
                             circle.center = human_future_positions[global_step][i][j]
 
-            def plot_value_heatmap():
+            def plot_value_heatmap(output_file=None):
                 if self.robot.kinematics != 'holonomic':
                     print('Kinematics is not holonomic')
                     return
@@ -599,11 +607,24 @@ class CrowdSim(gym.Env):
                 # when any key is pressed draw the action value plot
                 fig, axis = plt.subplots()
                 speeds = [0] + self.robot.policy.speeds
-                rotations = self.robot.policy.rotations + [np.pi * 2]
+                # rotations = self.robot.policy.rotations + [np.pi * 2] # 直接合并不了，采用下一行的方式
+                rotations = [r for r in self.robot.policy.rotations if r is not None] + [np.pi * 2]
+
                 r, th = np.meshgrid(speeds, rotations)
+
+                #[x]: action values维度为41,之前代码错误是动作空间的顺序排序问题
+                # logging.info("len(self.action_values): %s", len(self.action_values)) 
                 z = np.array(self.action_values[global_step % len(self.states)][1:])
+                # /
+                # self.action_values = self.robot.policy.action_values # 这里直接再重新拷贝一次
+                # z = np.array(self.action_values[1:])
+
+                # logging.info("z.shape before: %s", z.shape) 
                 z = (z - np.min(z)) / (np.max(z) - np.min(z))
+                # logging.info("z.shape before: %s", z.shape) 
                 z = np.reshape(z, (self.robot.policy.rotation_samples, self.robot.policy.speed_samples))
+                # logging.info("z.shape after : %s", z.shape) 
+
                 polar = plt.subplot(projection="polar")
                 polar.tick_params(labelsize=16)
                 mesh = plt.pcolormesh(th, r, z, vmin=0, vmax=1)
@@ -612,7 +633,8 @@ class CrowdSim(gym.Env):
                 cbaxes = fig.add_axes([0.85, 0.1, 0.03, 0.8])
                 cbar = plt.colorbar(mesh, cax=cbaxes)
                 cbar.ax.tick_params(labelsize=16)
-                plt.show()
+                # plt.show()
+                plt.savefig(output_file)
 
             def print_matrix_A():
                 # with np.printoptions(precision=3, suppress=True):
@@ -636,21 +658,38 @@ class CrowdSim(gym.Env):
                     print(self.Xs[global_step])
 
             def on_click(event):
-                if anim.running:
-                    anim.event_source.stop()
-                    if event.key == 'a':
-                        if hasattr(self.robot.policy, 'get_matrix_A'):
-                            print_matrix_A()
-                        if hasattr(self.robot.policy, 'get_feat'):
-                            print_feat()
-                        if hasattr(self.robot.policy, 'get_X'):
-                            print_X()
-                        # if hasattr(self.robot.policy, 'action_values'):
-                        #    plot_value_heatmap()
-                else:
-                    anim.event_source.start()
-                anim.running ^= True
+                if event.key == 't': # stop
+                    if anim.running:
+                        anim.event_source.stop()
+                        print('stop')
+                        anim.running = False
+                elif event.key == 'r': # run/start
+                    if anim.running == False:
+                        anim.event_source.start()
+                        print('start')
+                        anim.running = True
+                elif event.key == 'a': # plot
+                    # if hasattr(self.robot.policy, 'get_matrix_A'):
+                    #     print_matrix_A()
+                    # if hasattr(self.robot.policy, 'get_feat'):
+                    #     print_feat()
+                    # if hasattr(self.robot.policy, 'get_X'):
+                    #     print_X()
 
+                    # print(self.robot.policy.action_space)
+                    print('save fig')
+                    random_int = random.randint(1, 10)
+                    file_prefix = 'heatmap_Gattn/case25_'
+                    scene_file = file_prefix + str(random_int) + '.png'
+                    heatmap_file = file_prefix + str(random_int) + '_.png'
+                    plt.savefig(scene_file)
+                    if hasattr(self.robot.policy, 'action_values'):
+                        plot_value_heatmap(heatmap_file)
+                # anim.running ^= True # 取反操作
+
+
+                
+            self.heat_print = False
             fig.canvas.mpl_connect('key_press_event', on_click)
             anim = animation.FuncAnimation(fig, update, frames=len(self.states), interval=self.time_step * 500)
             anim.running = True

@@ -157,6 +157,7 @@ class GCNsAttnRL(Policy):
         checkpoint = torch.load(file)
         self.load_state_dict(checkpoint)
 
+
     def build_action_space(self, v_pref):
         """
         Action space consists of 25 uniformly sampled actions in permitted range and 25 randomly sampled actions.
@@ -169,26 +170,36 @@ class GCNsAttnRL(Policy):
             rotations = np.linspace(-self.rotation_constraint, self.rotation_constraint, self.rotation_samples)
 
         action_space = [ActionXY(0, 0) if holonomic else ActionRot(0, 0)]
-        for j, speed in enumerate(speeds):
-            if j == 0:
-                # index for action (0, 0)
-                self.action_group_index.append(0)
-            # only two groups in speeds
-            if j < 3:
-                speed_index = 0
+
+        #[x]:暂时替代下面的排序方式
+        for rotation, speed in itertools.product(rotations, speeds):
+            if holonomic:
+                action_space.append(ActionXY(speed * np.cos(rotation), speed * np.sin(rotation)))
             else:
-                speed_index = 1
+                action_space.append(ActionRot(speed, rotation))
 
-            for i, rotation in enumerate(rotations):
-                rotation_index = i // 2
 
-                action_index = speed_index * self.sparse_rotation_samples + rotation_index
-                self.action_group_index.append(action_index)
 
-                if holonomic:
-                    action_space.append(ActionXY(speed * np.cos(rotation), speed * np.sin(rotation)))
-                else:
-                    action_space.append(ActionRot(speed, rotation))
+        # for j, speed in enumerate(speeds):
+        #     if j == 0:
+        #         # index for action (0, 0)
+        #         self.action_group_index.append(0)
+        #     # only two groups in speeds
+        #     if j < 3:
+        #         speed_index = 0
+        #     else:
+        #         speed_index = 1
+
+        #     for i, rotation in enumerate(rotations):
+        #         rotation_index = i // 2
+
+        #         action_index = speed_index * self.sparse_rotation_samples + rotation_index
+        #         self.action_group_index.append(action_index)
+
+        #         if holonomic:
+        #             action_space.append(ActionXY(speed * np.cos(rotation), speed * np.sin(rotation)))
+        #         else:
+        #             action_space.append(ActionRot(speed, rotation))
 
         self.speeds = speeds
         self.rotations = rotations
@@ -220,15 +231,16 @@ class GCNsAttnRL(Policy):
         if self.phase == 'train' and probability < self.epsilon:
             max_action = self.action_space[np.random.choice(len(self.action_space))]
         else:
+            self.action_values = list()
             max_action = None
             max_value = float('-inf')
             max_traj = None
 
-            if self.do_action_clip:
-                state_tensor = state.to_tensor(add_batch_size=True, device=self.device)
-                action_space_clipped = self.action_clip(state_tensor, self.action_space, self.planning_width)
-            else:
-                action_space_clipped = self.action_space
+            # if self.do_action_clip:
+            #     state_tensor = state.to_tensor(add_batch_size=True, device=self.device)
+            #     action_space_clipped = self.action_clip(state_tensor, self.action_space, self.planning_width)
+            # else:
+            action_space_clipped = self.action_space
 
             for action in action_space_clipped:
                 state_tensor = state.to_tensor(add_batch_size=True, device=self.device)
@@ -236,10 +248,13 @@ class GCNsAttnRL(Policy):
                 max_next_return, max_next_traj = self.V_planning(next_state, self.planning_depth, self.planning_width)
                 reward_est = self.estimate_reward(state, action)
                 value = reward_est + self.get_normalized_gamma() * max_next_return
+                self.action_values.append(value.detach().numpy())
                 if value > max_value:
                     max_value = value
                     max_action = action
                     max_traj = [(state_tensor, action, reward_est)] + max_next_traj
+            # logging.info('policy: length of action_values: %s', len(self.action_values))
+            # length of action_values: 81
             if max_action is None:
                 raise ValueError('Value network is not well trained.')
 
