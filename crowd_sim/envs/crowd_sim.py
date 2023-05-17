@@ -387,7 +387,7 @@ class CrowdSim(gym.Env):
         y_offset = 0.4
         cmap = plt.cm.get_cmap('hsv', 10)
         robot_color = 'black'
-        arrow_style = patches.ArrowStyle("->", head_length=4, head_width=2)
+        arrow_style = patches.ArrowStyle("Fancy", head_length=12, head_width=10, tail_width=10)
         display_numbers = True
 
         if mode == 'traj':
@@ -456,8 +456,8 @@ class CrowdSim(gym.Env):
         elif mode == 'video':
             fig, ax = plt.subplots(figsize=(7, 7))
             ax.tick_params(labelsize=12)
-            ax.set_xlim(-11, 11)
-            ax.set_ylim(-11, 11)
+            ax.set_xlim(-6, 6) # default: (-11, 11) 
+            ax.set_ylim(-6, 6) # default: (-11, 11) 
             ax.set_xlabel('x(m)', fontsize=14)
             ax.set_ylabel('y(m)', fontsize=14)
             show_human_start_goal = False
@@ -545,22 +545,23 @@ class CrowdSim(gym.Env):
                 ax.add_artist(arrow)
             global_step = 0
 
-            if len(self.trajs) != 0:
-                human_future_positions = []
-                human_future_circles = []
-                for traj in self.trajs:
-                    human_future_position = [[tensor_to_joint_state(traj[step+1][0]).human_states[i].position
-                                              for step in range(self.robot.policy.planning_depth)]
-                                             for i in range(self.human_num)]
-                    human_future_positions.append(human_future_position)
+            # 绘制初始的轨迹预测
+            # if len(self.trajs) != 0:
+            #     human_future_positions = []
+            #     human_future_circles = []
+            #     for traj in self.trajs:
+            #         human_future_position = [[tensor_to_joint_state(traj[step+1][0]).human_states[i].position
+            #                                   for step in range(self.robot.policy.planning_depth)]
+            #                                  for i in range(self.human_num)]
+            #         human_future_positions.append(human_future_position)
 
-                for i in range(self.human_num):
-                    circles = []
-                    for j in range(self.robot.policy.planning_depth):
-                        circle = plt.Circle(human_future_positions[0][i][j], self.humans[0].radius/(1.7+j), fill=False, color=cmap(i))
-                        ax.add_artist(circle)
-                        circles.append(circle)
-                    human_future_circles.append(circles)
+            #     for i in range(self.human_num):
+            #         circles = []
+            #         for j in range(self.robot.policy.planning_depth):
+            #             circle = plt.Circle(human_future_positions[0][i][j], self.humans[0].radius/(1.7+j), fill=False, color=cmap(i))
+            #             ax.add_artist(circle)
+            #             circles.append(circle)
+            #         human_future_circles.append(circles)
 
             def update(frame_num):
                 nonlocal global_step
@@ -591,10 +592,11 @@ class CrowdSim(gym.Env):
 
                 time.set_text('Time: {:.2f}'.format(frame_num * self.time_step))
 
-                if len(self.trajs) != 0:
-                    for i, circles in enumerate(human_future_circles):
-                        for j, circle in enumerate(circles):
-                            circle.center = human_future_positions[global_step][i][j]
+                # 更新并绘制轨迹预测
+                # if len(self.trajs) != 0:
+                #     for i, circles in enumerate(human_future_circles):
+                #         for j, circle in enumerate(circles):
+                #             circle.center = human_future_positions[global_step][i][j]
 
             def plot_value_heatmap(output_file=None):
                 if self.robot.kinematics != 'holonomic':
@@ -679,7 +681,7 @@ class CrowdSim(gym.Env):
                     # print(self.robot.policy.action_space)
                     print('save fig')
                     random_int = random.randint(1, 10)
-                    file_prefix = 'heatmap_Gattn/case25_'
+                    file_prefix = 'heatmap_Gattn/case50_'
                     scene_file = file_prefix + str(random_int) + '.png'
                     heatmap_file = file_prefix + str(random_int) + '_.png'
                     plt.savefig(scene_file)
