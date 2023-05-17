@@ -103,8 +103,10 @@ class Explorer(object):
                          discomfort / total_time, average(min_dist))
 
         if print_failure:
-            logging.info('Collision cases: ' + ' '.join([str(x) for x in collision_cases]))
-            logging.info('Timeout cases: ' + ' '.join([str(x) for x in timeout_cases]))
+            # logging.info('Collision cases: ' + ' '.join([str(x) for x in collision_cases]))
+            # logging.info('Timeout cases: ' + ' '.join([str(x) for x in timeout_cases]))
+            logging.info('Collision rate: ' + (str)(len(collision_cases)/k) + ', Collision cases: ' + ' '.join([str(x) for x in collision_cases]))
+            logging.info('Timeout rate: ' + (str)(len(timeout_cases)/k) + ', Timeout cases: ' + ' '.join([str(x) for x in timeout_cases]))
 
         self.statistics = success_rate, collision_rate, avg_nav_time, average(cumulative_rewards), average(average_returns)
 
