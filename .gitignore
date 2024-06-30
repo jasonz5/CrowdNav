@@ -11,6 +11,6 @@ venv*/
 
 # data
 data/
-*.mp4
+# *.mp4
 # experiment/
 *.log
